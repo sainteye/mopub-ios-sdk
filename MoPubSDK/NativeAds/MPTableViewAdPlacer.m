@@ -107,6 +107,12 @@ static NSString * const kTableViewAdPlacerReuseIdentifier = @"MPTableViewAdPlace
 
 - (void)adPlacer:(MPStreamAdPlacer *)adPlacer didLoadAdAtIndexPath:(NSIndexPath *)indexPath
 {
+    NSInteger safeSectionNumber = [self.tableView.dataSource numberOfSectionsInTableView:self.tableView];
+    NSInteger safeRowNumber = [self.tableView.dataSource tableView:self.tableView numberOfRowsInSection:indexPath.section];
+    if(indexPath.section >= safeSectionNumber || indexPath.row >= safeRowNumber) {
+        return;
+    }
+    
     BOOL originalAnimationsEnabled = [UIView areAnimationsEnabled];
     //We only want to enable animations if the index path is before or within our visible cells
     BOOL animationsEnabled = ([(NSIndexPath *)[self.tableView.indexPathsForVisibleRows lastObject] compare:indexPath] != NSOrderedAscending) && originalAnimationsEnabled;
@@ -120,10 +126,19 @@ static NSString * const kTableViewAdPlacerReuseIdentifier = @"MPTableViewAdPlace
 
 - (void)adPlacer:(MPStreamAdPlacer *)adPlacer didRemoveAdsAtIndexPaths:(NSArray *)indexPaths
 {
+    NSMutableArray *targetIndexPaths = [[NSMutableArray alloc] init];
+    for (NSIndexPath *indexPath in indexPaths) {
+        if (indexPath.section < [self.tableView numberOfSections]) {
+            if (indexPath.row < [self.tableView numberOfRowsInSection:indexPath.section]) {
+                [targetIndexPaths addObject:indexPath];
+            }
+        }
+    }
+    
     BOOL originalAnimationsEnabled = [UIView areAnimationsEnabled];
     [UIView setAnimationsEnabled:NO];
     [self.tableView mp_beginUpdates];
-    [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationNone];
+    [self.tableView deleteRowsAtIndexPaths:targetIndexPaths withRowAnimation:UITableViewRowAnimationNone];
     [self.tableView mp_endUpdates];
     [UIView setAnimationsEnabled:originalAnimationsEnabled];
 }
